@@ -1,4 +1,26 @@
 const express = require('express');
+const dotenv = require('dotenv');
+const { IamAuthenticator } = require('ibm-watson/auth');
+const NaturalLanguageUnderstandingV1 = require('ibm-watson/natural-language-understanding/v1');
+
+dotenv.config();
+
+function getLanguageTranslator() {
+  let api_key = process.env.API_KEY;
+  let api_url = process.env.API_URL;
+  const naturalLanguageUnderstanding = new NaturalLanguageUnderstandingV1({
+    version: '2020-08-01',
+    authenticator: new IamAuthenticator({
+      apikey: api_key,
+    }),
+    serviceUrl: api_url
+  });
+
+  return naturalLanguageUnderstanding;
+}
+
+const languageTranslator = getLanguageTranslator();
+
 const app = new express();
 
 app.use(express.static('client'))
@@ -11,23 +33,73 @@ app.get("/",(req,res)=>{
   });
 
 app.get("/url/emotion", (req,res) => {
+  const analyzeParams = {
+    'url': req.query.url,
+    'features': {
+      'emotion': {}
+    }
+  };
 
-    return res.send({"happy":"90","sad":"10"});
+  languageTranslator.analyze(analyzeParams)
+  .then(analysisResults => {
+    return res.send(analysisResults.result.emotion.document.emotion);
+  })
+  .catch(err => {
+    return res.send("ERROR " + JSON.parse(err.body).code + ": " + JSON.parse(err.body).error);
+  });
 });
 
 app.get("/url/sentiment", (req,res) => {
-    return res.send("url sentiment for "+req.query.url);
+  const analyzeParams = {
+    'url': req.query.url,
+    'features': {
+      'sentiment': {}
+    }
+  };
+
+  languageTranslator.analyze(analyzeParams)
+  .then(analysisResults => {
+    return res.send(analysisResults.result.sentiment.document.label.toString());
+  })
+  .catch(err => {
+    return res.send("ERROR " + JSON.parse(err.body).code + ": " + JSON.parse(err.body).error);
+  });
 });
 
 app.get("/text/emotion", (req,res) => {
-    return res.send({"happy":"10","sad":"90"});
+  const analyzeParams = {
+    'text': req.query.text,
+    'features': {
+      'emotion': {}
+    }
+  };
+
+  languageTranslator.analyze(analyzeParams)
+  .then(analysisResults => {
+    return res.send(analysisResults.result.emotion.document.emotion);
+  })
+  .catch(err => {
+    return res.send("ERROR " + JSON.parse(err.body).code + ": " + JSON.parse(err.body).error);
+  });
 });
 
 app.get("/text/sentiment", (req,res) => {
-    return res.send("text sentiment for "+req.query.text);
+  const analyzeParams = {
+    'text': req.query.text,
+    'features': {
+      'sentiment': {}
+    }
+  };
+
+  languageTranslator.analyze(analyzeParams)
+  .then(analysisResults => {
+    return res.send(analysisResults.result.sentiment.document.label.toString());
+  })
+  .catch(err => {
+    return res.send("ERROR " + JSON.parse(err.body).code + ": " + JSON.parse(err.body).error);
+  });
 });
 
 let server = app.listen(8080, () => {
     console.log('Listening', server.address().port)
 })
-
